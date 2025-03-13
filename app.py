@@ -4,9 +4,13 @@ import os
 import shutil
 import time
 import logging
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['STATIC_FOLDER'] = 'static'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default_secret_key')
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -14,6 +18,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+
+if not os.path.exists(app.config['STATIC_FOLDER']):
+    os.makedirs(app.config['STATIC_FOLDER'])
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -49,22 +56,19 @@ def replace_footer(file_path, new_name):
                 if paragraph.text.strip():
                     paragraph.text = new_name
         
-        
+       
         updated_file_name = os.path.basename(file_path).replace('.docx', '_updated.docx')
-        updated_file_path = os.path.join('static', updated_file_name)
+        updated_file_path = os.path.join(app.config['STATIC_FOLDER'], updated_file_name)
         doc.save(updated_file_path)
         
-        return updated_file_name 
+        return updated_file_name  
     except Exception as e:
         logging.error(f"Error processing file: {e}")
         return None
 
-
-
 def cleanup_folders():
- 
     current_time = time.time()
-    for folder in ['uploads', 'static']:
+    for folder in [app.config['UPLOAD_FOLDER'], app.config['STATIC_FOLDER']]:
         for filename in os.listdir(folder):
             file_path = os.path.join(folder, filename)
             try:
@@ -78,9 +82,6 @@ def cleanup_folders():
                 print(f"Failed to delete {file_path}. Reason: {e}")
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
-while True:
-    cleanup_folders()
-    time.sleep(3600)        
-
+   
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
